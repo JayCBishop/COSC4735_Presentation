@@ -25,6 +25,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.os.AsyncTask;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -64,6 +66,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
      * Handler message id for updating the time periodically in interactive mode.
      */
     private static final int MSG_UPDATE_TIME = 0;
+    private static final int MSG_LOAD_BATTERY =1;
+    int batteryPercent = 0;
 
     @Override
     public Engine onCreateEngine() {
@@ -120,6 +124,42 @@ public class MyWatchFace extends CanvasWatchFaceService {
          */
         boolean mLowBitAmbient;
 
+        private AsyncTask<Void, Void, Integer> mLoadBatteryTask;
+
+        final Handler mUpdateBatterHandler = new Handler(){
+            @Override
+            public void handleMessage(Message message)
+            {
+                switch(message.what)
+                {
+                    case MSG_LOAD_BATTERY:
+                        mLoadBatteryTask = new LoadBatteryPercentage();
+                        mLoadBatteryTask.execute();
+                        break;
+                }
+            }
+        };
+
+        private class LoadBatteryPercentage extends AsyncTask<Void, Void, Integer>
+        {
+            @Override
+            protected Integer doInBackground(Void... params)
+            {
+                IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+                Intent batteryStatus = getBaseContext().registerReceiver(null, filter);
+
+                int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL,  -1);
+
+                return level;
+            }
+
+            @Override
+            protected void onPostExecute(Integer result)
+            {
+                onBatteryLoaded(result);
+            }
+        }
+
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
@@ -148,6 +188,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
         @Override
         public void onDestroy() {
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
+            mUpdateBatterHandler.removeMessages(MSG_LOAD_BATTERY);
             super.onDestroy();
         }
 
@@ -242,6 +283,10 @@ public class MyWatchFace extends CanvasWatchFaceService {
             float hrX = (float) Math.sin(hrRot) * hrLength;
             float hrY = (float) -Math.cos(hrRot) * hrLength;
             canvas.drawLine(centerX, centerY, centerX + hrX, centerY + hrY, mHandPaint);
+
+            float textSize = 20;
+            mHandPaint.setTextSize(textSize);
+            canvas.drawText(Integer.toString(batteryPercent) + " %", centerX -15 , centerY+100, mHandPaint);
         }
 
         @Override
@@ -292,8 +337,10 @@ public class MyWatchFace extends CanvasWatchFaceService {
          */
         private void updateTimer() {
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
+            mUpdateBatterHandler.removeMessages(MSG_LOAD_BATTERY);
             if (shouldTimerBeRunning()) {
                 mUpdateTimeHandler.sendEmptyMessage(MSG_UPDATE_TIME);
+                mUpdateBatterHandler.sendEmptyMessage(MSG_LOAD_BATTERY);
             }
         }
 
@@ -315,6 +362,22 @@ public class MyWatchFace extends CanvasWatchFaceService {
                 long delayMs = INTERACTIVE_UPDATE_RATE_MS
                         - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
+                mUpdateBatterHandler.sendEmptyMessageDelayed(MSG_LOAD_BATTERY, delayMs);
+            }
+        }
+
+        private void onBatteryLoaded(Integer result)
+        {
+            if(result != null)
+            {
+                batteryPercent = result;
+                invalidate();
+            }
+            if(isVisible())
+            {
+                long timeMs = System.currentTimeMillis();
+                long delayMs = INTERACTIVE_UPDATE_RATE_MS - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
+                mUpdateBatterHandler.sendEmptyMessageDelayed(MSG_LOAD_BATTERY,delayMs);
             }
         }
 
