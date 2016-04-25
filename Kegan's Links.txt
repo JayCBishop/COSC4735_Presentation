@@ -1,0 +1,6 @@
+http://developer.android.com/training/wearables/watch-faces/configuration.html#Listener
+http://developer.android.com/training/wearables/apps/always-on.html
+http://developer.android.com/samples/WatchFace/index.html
+http://developer.android.com/training/wearables/data-layer/events.html
+http://stackoverflow.com/questions/27538742/adding-a-simple-toggle-configuration-for-watch-face-android-wear
+http://developer.android.com/training/wearables/data-layer/data-items.html
