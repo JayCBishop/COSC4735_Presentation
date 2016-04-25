@@ -12,5 +12,5 @@ with the battery percentage.
 It also demonstrates how to add interactivity to the watch face
 through gestures and a configuration activity.
 
-MobilePresentationExtras demonstrates how to add a custom card
-to a wearable app.
+MobilePresentationExtras demonstrates the custom card fragment
+in a wearable app.
